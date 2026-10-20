@@ -7,8 +7,8 @@
 <style>
 :root{--ink:#151313}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--ink)}
-.frame,.build,.color,.final,.outro{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;visibility:hidden}
-.outro{z-index:3}   /* závěr naskočí střihem přes poslední snímek */
+.frame,.build,.color,.final,.outro,.tee{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;visibility:hidden}
+.outro,.tee{z-index:3}   /* závěr a merch naskočí střihem přes poslední snímek */
 .on{visibility:visible}
 /* Kříž: vlastní vrstva, mimo hru přes display:none, aby nic neprosvítalo do ostatních screenů */
 .reveal{position:fixed;inset:0;width:100%;height:100%;display:none}
@@ -91,6 +91,13 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--ink)}
 <img class="outro" src="screeny/31_symbol_bila-na-interieru-3.png" alt="">
 <img class="outro" src="screeny/32_symbol_bila-na-interieru-4.png" alt="">
 <img class="outro" src="screeny/33_symbol_bila-na-interieru-5.png" alt="">
+<!-- Merch: dámské tričko se symbolem v 6 barvách, stejný rychlý střih ve smyčce (mockupy/merch/web/) -->
+<img class="tee" src="mockupy/merch/web/tricko_symbol_inkoust.jpg" alt="">
+<img class="tee" src="mockupy/merch/web/tricko_symbol_oxblood.jpg" alt="">
+<img class="tee" src="mockupy/merch/web/tricko_symbol_lahvova.jpg" alt="">
+<img class="tee" src="mockupy/merch/web/tricko_symbol_krem.jpg" alt="">
+<img class="tee" src="mockupy/merch/web/tricko_symbol_pudrova.jpg" alt="">
+<img class="tee" src="mockupy/merch/web/tricko_symbol_bila.jpg" alt="">
 
 <!-- Kříž střihem po 0,3 s: detaily P → P → bližší P → „+“ (přesný tvar z P) → tentýž kříž otočený o 45°, bílý na Lahvové zelené
      Krok 1 (plynule): kříž doladí proporce na X z masteru → kamera odjede, přijede druhé X, dokreslí se oblouky → symbol -->
@@ -155,7 +162,8 @@ const build = [...document.querySelectorAll('.build')];
 const colors = [build[build.length - 1], ...document.querySelectorAll('.color')];
 const final = document.querySelector('.final');
 const outro = [...document.querySelectorAll('.outro')];
-const all = [...frames, ...build, ...colors.slice(1), final, ...outro];
+const tee = [...document.querySelectorAll('.tee')];
+const all = [...frames, ...build, ...colors.slice(1), final, ...outro, ...tee];
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 // ms na jeden screen; při omezeném pohybu pomaleji
 const STEP = reduced ? 800 : 300;
@@ -413,17 +421,20 @@ function next(){
   else if (mode === 'logo') startBy();
   else if (mode === 'logo-full') showMock(0);
   else if (mode === 'mock'){ if (mi < mocks.length - 1) showMock(mi + 1); else playOutro(); }
+  else if (mode === 'outro') playTee();
 }
-// závěr: symbol ve stejném rychlém střihu jako úvod, ve smyčce až do konce
-function playOutro(){
-  stop(); hideMocks(); mode = 'outro';
+// rychlý střih ve smyčce (závěr se symbolem, pak merch), stejné tempo jako úvod
+function loop(list, m){
+  stop(); hideMocks(); mode = m;
   let k = 0;
   (function tick(){
-    show(outro[k]);
-    k = (k + 1) % outro.length;
+    show(list[k]);
+    k = (k + 1) % list.length;
     timer = setTimeout(tick, STEP);
   })();
 }
+const playOutro = () => loop(outro, 'outro');
+const playTee = () => loop(tee, 'tee');           // úplný konec: tričko v 6 barvách
 function prev(){
   if (mode === 'word' || mode === 'colors'){ i = 0; play(); }  // → úvod
   else if (mode === 'final'){ stop(); cycle(0); }               // → barevná smyčka PLACE
@@ -433,7 +444,8 @@ function prev(){
   else if (mode === 'logo-anim' || mode === 'logo'){ symbolState(); meaning(MEANING.length - 1); } // → poslední čtení symbolu
   else if (mode === 'by-anim' || mode === 'logo-full') logoState(false); // → logo bez by sisters
   else if (mode === 'mock'){ if (mi > 0) showMock(mi - 1); else { hideMocks(); logoState(true); } }   // → předchozí mockup / celé logo
-  else if (mode === 'outro'){ stop(); show(null); showMock(mocks.length - 1); }                         // → poslední snímek (logo na barvách)
+  else if (mode === 'outro'){ stop(); show(null); showMock(mocks.length - 1); }
+  else if (mode === 'tee') playOutro();                                                                // → závěr se symbolem                         // → poslední snímek (logo na barvách)
 }
 function restart(){ i = 0; play(); }
 function fullscreen(){
@@ -453,11 +465,11 @@ const ctl = $('ctl'), stepName = $('stepName'), bPrev = $('bPrev'), bNext = $('b
 [['bPrev', prev], ['bNext', next], ['bRestart', restart], ['bFs', fullscreen]].forEach(([id, fn]) =>
   $(id).addEventListener('click', e => { fn(); e.currentTarget.blur(); }));   // blur: mezerník pak neklikne znovu
 const NAMES = { intro: 'Úvod', word: 'PLACE', colors: 'PLACE', final: 'PLACE na interiéru', zoom: 'Kříž', cross: 'Kříž', meaning: 'Co symbol znamená',
-                'symbol-anim': 'Symbol', symbol: 'Symbol', 'logo-anim': 'Logo', logo: 'Logo', 'by-anim': 'Logo', 'logo-full': 'Logo', outro: 'Závěr' };
+                'symbol-anim': 'Symbol', symbol: 'Symbol', 'logo-anim': 'Logo', logo: 'Logo', 'by-anim': 'Logo', 'logo-full': 'Logo', outro: 'Závěr', tee: 'Merch' };
 setInterval(() => {
   stepName.textContent = mode === 'mock' ? mocks[mi].dataset.name : (NAMES[mode] || '');
   bPrev.disabled = mode === 'intro';
-  bNext.disabled = mode === 'outro';
+  bNext.disabled = mode === 'tee';
 }, 150);
 let idleT = null;
 function wake(){ ctl.classList.remove('idle'); clearTimeout(idleT); idleT = setTimeout(() => { if (!ctl.matches(':hover, :focus-within')) ctl.classList.add('idle'); }, 2500); }
